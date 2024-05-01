@@ -3,8 +3,8 @@ from django.db import models
 from django.contrib.auth.hashers import PBKDF2PasswordHasher
 
 class RoleTable(models.Model):
-    role_id = models.AutoField(primary_key=True)
-    role_name = models.CharField(max_length=45)
+    #role_id = models.AutoField(primary_key=True)
+    role_name = models.CharField(primary_key=True, max_length=45)
 
     def __str__(self):
         return self.role_name
@@ -19,7 +19,7 @@ class UserTable(models.Model):
     phone_number = models.BigIntegerField()
     first_name = models.CharField(max_length=45)
     last_name = models.CharField(max_length=45)
-    password = models.CharField(max_length=255)
+    password = models.CharField(max_length=1000)
 
     def save(self, *args, **kwargs):
         if self.password:
@@ -55,13 +55,19 @@ class TicketTable(models.Model):
     email = models.ForeignKey(UserTable, on_delete=models.CASCADE,db_column='email')
     category_id = models.ForeignKey(CategoryTable, on_delete=models.CASCADE,db_column='category_id')
     ticket_subject = models.CharField(max_length=45)
-    ticket_description = models.CharField(max_length=255)
+    ticket_description = models.CharField(max_length=1000)
+    attachments = models.CharField(max_length=255)
     creation_date = models.DateField()
     status = models.CharField(max_length=100)
 
     def __str__(self):
-        formatString = "{ticketId} : {ticketSubject} : {ticketDescription} : {ticketStatus} : {email} : {name}"
-        return formatString.format(ticketId=self.ticket_id, ticketSubject=self.ticket_subject, ticketDescription=self.ticket_description, ticketStatus=self.status, email=self.email.email, name=(self.email.first_name + " " + self.email.last_name))
+
+        #----------------Old Format-------------------
+        #formatString = "{ticketId} : {ticketSubject} : {ticketDescription} : {ticketStatus} : {email} : {name}"
+        #return formatString.format(ticketId=self.ticket_id, ticketSubject=self.ticket_subject, ticketDescription=self.ticket_description, ticketStatus=self.status, email=self.email.email, name=(self.email.first_name + " " + self.email.last_name))
+
+        formatString = "{ticketId} : {ticketSubject} : {ticketDescription} : {attachments} : {ticketStatus} : {email} : {name}"
+        return formatString.format(ticketId=self.ticket_id, ticketSubject=self.ticket_subject, ticketDescription=self.ticket_description, attachments=self.attachments, ticketStatus=self.status, email=self.email.email, name=(self.email.first_name + " " + self.email.last_name))
 
     class Meta:
         managed = False
@@ -91,15 +97,34 @@ class AssignmentTable(models.Model):
         db_table = 'assignment_table'
 
 class ActionTable(models.Model):
-    assignment_id = models.AutoField(primary_key=True)
-    ticket_id = models.ForeignKey('TicketTable', on_delete=models.CASCADE, db_column='ticket_id')
-    email = models.ForeignKey('UserTable', db_column='email', on_delete=models.CASCADE)
-    
+    #----------------Old Variables-------------------
+    #assignment_id = models.AutoField(primary_key=True)
+    #ticket_id = models.ForeignKey('TicketTable', on_delete=models.CASCADE, db_column='ticket_id')
+    #email = models.ForeignKey('UserTable', db_column='email', on_delete=models.CASCADE)
+    #------------------------------------------------
+    action_id = models.AutoField(primary_key=True)
+    ticket_id = models.ForeignKey('TicketTable', models.CASCADE, db_column='ticket_id')
+    email = models.ForeignKey('UserTable', models.CASCADE, db_column='email')
+    date_added = models.DateTimeField()
+    comment = models.CharField(max_length=1000)
+    actions = models.CharField(max_length=20)
+    attachments = models.ForeignKey('TicketTable', on_delete=models.DO_NOTHING, db_column='attachments')
+
     class Meta:
         managed = False
         db_table = 'action_table'
 
+    def save(self,  *args, **kwargs):
+        if not self.date_added:
+            today = timezone.now().today()
+            today_str = today.strftime('%Y-%m-%d %H:%M:%S')
+            self.date_added = today_str
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        formatString = "{ActionId} : {ticketId} : {email} : {name}"
-        return formatString.format(ActionId=self.assignment_id, item=self.ticket_id.ticket_id, email=self.email.email, name=(self.email.first_name + " " + self.email.last_name))
+        #----------------Old Format-------------------
+        #formatString = "{ActionId} : {ticketId} : {email} : {name}"
+        #return formatString.format(ActionId=self.assignment_id, item=self.ticket_id.ticket_id, email=self.email.email, name=(self.email.first_name + " " + self.email.last_name))
+        
+        formatString = "{ActionId} : {item} : {assigned} : {comment} : {actions} : {attachments}"
+        return formatString.format(ActionId=self.action_id, item=self.ticket_id.ticket_subject, assigned=(self.email.first_name + " " + self.email.last_name), comment=self.comment, actions=self.actions, attachments=self.attachments.attachments)
